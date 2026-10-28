@@ -16,6 +16,25 @@ from app.data_ingestion.risk_scorer import RiskScoringEngine
 from app.inventory.resource_manager import ResourceManager
 from app.optimization.routing import GeospatialRoutingEngine
 from app.optimization.solver import OptimizationSolver
+from app.ml.predictor import predict_flood
+
+class FloodPredictionRequest(BaseModel):
+    Rainfall_mm: float
+    River_Level_m: float
+    River_Discharge_m3s: float
+    Soil_Moisture_pct: float
+    Humidity_pct: float
+    Temperature_C: float
+    Elevation_m: float
+    Slope_deg: float
+    Drainage_Capacity_pct: float
+    Urbanization_pct: float
+    Deforestation_pct: float
+    Population_Density: float
+    Historical_Floods: float
+    Soil_Type: str
+    Land_Cover: str
+
 
 app = FastAPI(
     title="Kerala Flood Intelligence System API",
@@ -294,3 +313,19 @@ def get_simulation_state(step: int = Query(2), scenario: str = Query("cloudburst
     for resource in allocated_resources
 ) > 0 else 0
 }
+
+@app.post("/api/predict")
+def predict_flood_api(request: FloodPredictionRequest):
+    try:
+        result = predict_flood(request.model_dump())
+
+        return {
+            "status": "success",
+            "result": result
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }

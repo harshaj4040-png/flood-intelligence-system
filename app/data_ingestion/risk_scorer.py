@@ -9,7 +9,11 @@ class RiskScoringEngine:
             self.raw_data = json.load(f)
         self.zones = {z["id"]: z for z in self.raw_data["zones"]}
 
-    def calculate_zone_risks(self, sensor_telemetry: Dict[str, Any]) -> Dict[str, Any]:
+    def calculate_zone_risks(
+    self,
+    sensor_telemetry: Dict[str, Any],
+    ai_prediction_by_zone: Dict[str, float] = None
+) -> Dict[str, Any]:
         """
         Calculates Risk Severity Score (0.0 to 1.0) and translates risk to resource demands.
         """
@@ -61,17 +65,29 @@ class RiskScoringEngine:
             )
             composite_risk = round(min(1.0, max(0.0, composite_risk)), 3)
 
+            # Combine sensor-based risk with AI prediction
+            if ai_prediction_by_zone and zone_id in ai_prediction_by_zone:
+                ai_risk = ai_prediction_by_zone[zone_id] / 100.0
+
+                composite_risk = (
+                    0.7 * composite_risk +
+                    0.3 * ai_risk
+                )
+
+                composite_risk = round(
+                    min(1.0, max(0.0, composite_risk)), 3
+                )
+
             # Risk Category Assignment
             if composite_risk >= RISK_THRESHOLD_CRITICAL:
                 severity = "Critical"
-                color = "#FF2E93" # Vibrant Pinkish Red
+                color = "#FF2E93"
             elif composite_risk >= RISK_THRESHOLD_LOW:
                 severity = "Medium"
-                color = "#FFA500" # Orange
+                color = "#FFA500"
             else:
                 severity = "Low"
-                color = "#00E676" # Bright Green
-
+                color = "#00E676"
             # Calculate Resource Demand for this zone
             # Scale demands with population and severity multiplier
             pop_k = pop / 1000.0  # Population in thousands
